@@ -1,0 +1,575 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Intervention Management | CampusPulse AI</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        .account-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 12px 5%;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .account-bar a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .account-role {
+            padding: 5px 10px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .account-bar button {
+            padding: 9px 16px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="intervention-page">
+
+<!-- USER ACCOUNT BAR -->
+<div class="account-bar">
+
+    <span>
+        Welcome, <b>{{ session.get('username', 'User') }}</b>
+    </span>
+
+    <span class="account-role">
+        {{ session.get('role', '')|upper }}
+    </span>
+
+    <a href="{{ url_for('portal') }}">Portal</a> · <a href="{{ url_for('progress') }}">Progress</a> · <a href="{{ url_for('recommendations') }}">AI Support Reviews</a>
+
+    <a href="{{ url_for('index') }}">Dashboard</a>
+
+    <form method="POST"
+          action="{{ url_for('logout') }}"
+          style="margin:0;">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+        <button type="submit">Logout</button>
+
+    </form>
+
+</div>
+
+
+<header class="intervention-header">
+
+    <div>
+        <p class="eyebrow">CAMPUSPULSE AI • STUDENT SUPPORT</p>
+
+        <h1>Teacher Intervention Management</h1>
+
+        <p>
+            Assign support activities, monitor progress and record follow-ups.
+        </p>
+    </div>
+
+    <a href="{{ url_for('index') }}" class="back-dashboard">
+        ← Back to Dashboard
+    </a>
+
+</header>
+
+
+<main class="intervention-container">
+
+    <!-- FLASH MESSAGES -->
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+        {% if messages %}
+
+            {% for category, message in messages %}
+
+                <div class="intervention-alert {{ category }}">
+                    {{ message }}
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+    {% endwith %}
+
+
+    <!-- SUMMARY -->
+
+    <section class="intervention-stats">
+
+        <div class="intervention-stat">
+            <span>Pending</span>
+            <strong>{{ pending_count }}</strong>
+        </div>
+
+        <div class="intervention-stat">
+            <span>In Progress</span>
+            <strong>{{ progress_count }}</strong>
+        </div>
+
+        <div class="intervention-stat">
+            <span>Completed</span>
+            <strong>{{ completed_count }}</strong>
+        </div>
+
+        <div class="intervention-stat">
+            <span>Total Interventions</span>
+            <strong>{{ interventions|length }}</strong>
+        </div>
+
+    </section>
+
+
+    <!-- CREATE INTERVENTION -->
+
+    <section class="intervention-panel">
+
+        <div class="intervention-section-heading">
+
+            <div>
+                <p class="eyebrow">NEW SUPPORT ACTIVITY</p>
+                <h2>Assign an Intervention</h2>
+                <p>Select a student and create a support activity.</p>
+            </div>
+
+        </div>
+
+
+        {% if students %}
+
+        <form action="{{ url_for('create_intervention') }}"
+              method="POST"
+              class="intervention-form">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+            <div class="intervention-form-grid">
+
+                <div class="form-field">
+
+                    <label for="student_id">Select Student</label>
+
+                    <select name="student_id"
+                            id="student_id"
+                            required>
+
+                        <option value="">Choose a student</option>
+
+                        {% for student in students %}
+
+                        <option value="{{ student.student_id }}">
+
+                            {{ student.name }}
+                            ({{ student.student_id }}) -
+                            {{ student.level }} Risk
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label for="assigned_to">Assigned Teacher</label>
+
+                    <input type="text"
+                           id="assigned_to"
+                           name="assigned_to"
+                           placeholder="Enter teacher name"
+                           value="{{ session.get('username', '') }}"
+                           required>
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label for="support_type">Support Category</label>
+
+                    <select name="support_type"
+                            id="support_type"
+                            required>
+
+                        <option value="">Choose support category</option>
+
+                        <option value="Academic Support">Academic Support</option>
+
+                        <option value="Attendance Monitoring">Attendance Monitoring</option>
+
+                        <option value="Assignment Support">Assignment Support</option>
+
+                        <option value="Mentoring">Mentoring</option>
+
+                        <option value="Parent Communication">Parent Communication</option>
+
+                        <option value="Counselling Referral">Counselling Referral</option>
+
+                        <option value="Other">Other</option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label for="due_date">Follow-up Due Date</label>
+
+                    <input type="date"
+                           id="due_date"
+                           name="due_date"
+                           min="{{ now_date }}"
+                           required>
+
+                </div>
+
+
+                <div class="form-field full-width">
+
+                    <label for="description">
+                        Support Activity Details
+                    </label>
+
+                    <textarea id="description"
+                              name="description"
+                              rows="4"
+                              placeholder="Describe the support activity and expected outcome..."
+                              required></textarea>
+
+                </div>
+
+            </div>
+
+
+            <button type="submit"
+                    class="intervention-primary-button">
+
+                + Assign Intervention
+
+            </button>
+
+        </form>
+
+
+        {% else %}
+
+        <div class="intervention-empty">
+
+            <h3>No student dataset available</h3>
+
+            <p>
+                Go back to the dashboard and upload and analyse a student CSV
+                before assigning interventions.
+            </p>
+
+            <a href="{{ url_for('index') }}"
+               class="intervention-primary-button">
+
+                Open Student Dashboard
+
+            </a>
+
+        </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- INTERVENTION RECORDS -->
+
+    <section class="intervention-panel">
+
+        <div class="intervention-section-heading">
+
+            <div>
+                <p class="eyebrow">TRACKING & MONITORING</p>
+                <h2>Intervention Records</h2>
+
+                <p>
+                    Review assigned activities and update student support progress.
+                </p>
+            </div>
+
+        </div>
+
+
+        {% if interventions %}
+
+        <div class="intervention-record-list">
+
+            {% for item in interventions %}
+
+            <article class="intervention-record">
+
+                <div class="record-top">
+
+                    <div>
+
+                        <span class="record-id">
+                            INTERVENTION #{{ item.id }}
+                        </span>
+
+                        <h3>{{ item.student_name }}</h3>
+
+                        <p class="record-student-id">
+                            Student ID: {{ item.student_id }}
+                        </p>
+
+                    </div>
+
+
+                    <span class="status-pill
+                        {% if item.status == 'Completed' %}status-completed
+                        {% elif item.status == 'In Progress' %}status-progress
+                        {% else %}status-pending{% endif %}">
+
+                        {{ item.status }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="record-details">
+
+                    <div>
+                        <span>Support Category</span>
+                        <strong>{{ item.support_type }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Assigned Teacher</span>
+                        <strong>{{ item.assigned_to }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Due Date</span>
+                        <strong>{{ item.due_date }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Created On</span>
+                        <strong>{{ item.created_at }}</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="record-description">
+
+                    <h4>Support Activity</h4>
+                    <p>{{ item.description }}</p>
+
+                </div>
+
+
+                <!-- FOLLOW-UP HISTORY -->
+
+                <div class="record-history">
+
+                    <h4>Follow-up History</h4>
+
+                    {% set record_updates = updates
+                        |selectattr('intervention_id', 'equalto', item.id)
+                        |list %}
+
+
+                    {% if record_updates %}
+
+                        {% for update in record_updates %}
+
+                        <div class="history-item">
+
+                            <div class="history-heading">
+
+                                <strong>{{ update.status }}</strong>
+
+                                <span>{{ update.updated_at }}</span>
+
+                            </div>
+
+                            <p>{{ update.followup_note }}</p>
+
+                        </div>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <p class="no-history">
+                            No follow-up updates have been recorded yet.
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+
+                <!-- UPDATE FORM -->
+
+                <form method="POST"
+                      action="{{ url_for('update_intervention',
+                                         intervention_id=item.id) }}"
+                      class="followup-form">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+                    <h4>Update Intervention</h4>
+
+
+                    <div class="followup-fields">
+
+                        <div class="form-field">
+
+                            <label>Status</label>
+
+                            <select name="status" required>
+
+                                <option value="Pending"
+                                    {% if item.status == 'Pending' %}selected{% endif %}>
+                                    Pending
+                                </option>
+
+                                <option value="In Progress"
+                                    {% if item.status == 'In Progress' %}selected{% endif %}>
+                                    In Progress
+                                </option>
+
+                                <option value="Completed"
+                                    {% if item.status == 'Completed' %}selected{% endif %}>
+                                    Completed
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="form-field followup-note-field">
+
+                            <label>Follow-up Remark</label>
+
+                            <textarea name="followup_note"
+                                      rows="2"
+                                      placeholder="What progress was observed? What action was taken?"
+                                      required></textarea>
+
+                        </div>
+
+                    </div>
+
+
+                    <button type="submit"
+                            class="intervention-update-button">
+
+                        Save Progress Update
+
+                    </button>
+
+                </form>
+
+            </article>
+
+            {% endfor %}
+
+        </div>
+
+
+        {% else %}
+
+        <div class="intervention-empty">
+
+            <h3>No interventions assigned yet</h3>
+
+            <p>
+                Use the form above to create your first student support activity.
+            </p>
+
+        </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- ALL FOLLOW-UP ACTIVITY -->
+
+    <section class="intervention-panel">
+
+        <div class="intervention-section-heading">
+
+            <div>
+                <p class="eyebrow">RECENT ACTIVITY</p>
+                <h2>Follow-up Activity History</h2>
+            </div>
+
+        </div>
+
+
+        {% if updates %}
+
+        <div class="activity-list">
+
+            {% for update in updates %}
+
+            <div class="activity-item">
+
+                <div>
+
+                    <strong>{{ update.student_name }}</strong>
+
+                    <span>{{ update.status }}</span>
+
+                </div>
+
+                <p>{{ update.followup_note }}</p>
+
+                <small>{{ update.updated_at }}</small>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        {% else %}
+
+        <p class="no-history">
+            Follow-up activity will appear here after teachers submit updates.
+        </p>
+
+        {% endif %}
+
+    </section>
+
+</main>
+
+</body>
+</html>

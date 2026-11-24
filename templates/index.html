@@ -1,0 +1,660 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CampusPulse AI | Student Analytics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<style>
+.report-download-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 22px;
+    margin: 22px 0 28px;
+    padding: 22px 24px;
+    border: 1px solid #dce5ed;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(25, 50, 75, 0.06);
+}
+.report-download-panel h3 {
+    margin: 4px 0 6px;
+    color: #17324d;
+}
+.report-download-panel p {
+    margin-bottom: 0;
+}
+.report-download-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.report-download-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 16px;
+    border-radius: 9px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    transition: transform .15s ease, opacity .15s ease;
+}
+.report-download-btn:hover {
+    transform: translateY(-2px);
+    opacity: .92;
+}
+.csv-download {
+    color: #ffffff;
+    background: #197a58;
+}
+.pdf-download {
+    color: #ffffff;
+    background: #245b91;
+}
+@media (max-width: 700px) {
+    .report-download-panel {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .report-download-actions {
+        flex-direction: column;
+    }
+    .report-download-btn {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+</style>
+</head>
+
+<body>
+    <div style="display:flex; justify-content:flex-end; align-items:center;
+            gap:15px; padding:15px 5%; background:#fff;">
+    <span>
+        Logged in: <b>{{ session.get('username', 'User') }}</b>
+        ({{ session.get('role', '')|title }})
+    </span>
+
+    <a href="{{ url_for('portal') }}">Portal</a> · <a href="{{ url_for('progress') }}">Progress</a> · <a href="{{ url_for('recommendations') }}">AI Support Reviews</a>
+
+    <form method="POST" action="{{ url_for('logout') }}"
+          style="margin:0;">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <button type="submit">Logout</button>
+    </form>
+</div>
+
+{% set high_count = results|selectattr('level','equalto','High')|list|length %}
+{% set medium_count = results|selectattr('level','equalto','Medium')|list|length %}
+{% set low_count = results|selectattr('level','equalto','Low')|list|length %}
+
+{% set high_pct = (high_count / count * 100) if count else 0 %}
+{% set medium_pct = (medium_count / count * 100) if count else 0 %}
+{% set low_pct = (low_count / count * 100) if count else 0 %}
+
+{% set stats = namespace(attendance=0, marks=0, assignments=0, previous=0) %}
+
+{% for s in results %}
+    {% set stats.attendance = stats.attendance + s.attendance %}
+    {% set stats.marks = stats.marks + s.internal_marks %}
+    {% set stats.assignments = stats.assignments + s.assignment_completion %}
+    {% set stats.previous = stats.previous + s.previous_result %}
+{% endfor %}
+
+{% set avg_attendance = (stats.attendance / count) if count else 0 %}
+{% set avg_marks = (stats.marks / count) if count else 0 %}
+{% set avg_assignments = (stats.assignments / count) if count else 0 %}
+{% set avg_previous = (stats.previous / count) if count else 0 %}
+
+<header class="hero">
+    <div class="hero-content">
+        <p class="eyebrow">MULTI-MODEL • AGENTIC STUDENT SUPPORT</p>
+        <h1>CampusPulse <span>AI</span></h1>
+        <p class="sub">
+            Early warning · Explainable indicators · Human-reviewed support plans
+        </p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="upload">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <label for="student_file">Upload student CSV</label>
+        <input id="student_file" type="file" name="student_file" accept=".csv" required>
+        <button type="submit">Analyse class</button>
+    </form>
+</header>
+
+<main>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="notice">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<section class="status-row">
+
+    <div class="status-card">
+        <span class="dot {{ 'online' if llm_status.ready else 'offline' }}"></span>
+        <div>
+            <b>LLM connection</b>
+            <small>{{ llm_status.message }}</small>
+        </div>
+    </div>
+
+    <div class="status-card">
+        <span class="dot online"></span>
+        <div>
+            <b>ML model suite</b>
+            <small>Random Forest · Gradient Boosting · Isolation Forest · K-Means</small>
+        </div>
+    </div>
+
+</section>
+
+<div class="section-heading dashboard-heading">
+    <div>
+        <p class="eyebrow">OVERVIEW</p>
+        <h2>Student Analytics Dashboard</h2>
+        <p class="muted-text">
+            Monitor class performance and review student screening indicators.
+        </p>
+    </div>
+
+    <span class="source">
+        {{ 'Uploaded dataset' if uploaded else 'Sample dataset' }}
+    </span>
+</div>
+
+<!-- DOWNLOAD REPORTS -->
+<section class="report-download-panel">
+    <div>
+        <p class="eyebrow">EXPORT ANALYSIS</p>
+        <h3>Download student reports</h3>
+        <p class="muted-text">
+            Save the latest analysed student data for review, record keeping or printing.
+        </p>
+    </div>
+
+    <div class="report-download-actions">
+        <a class="report-download-btn csv-download"
+           href="{{ url_for('download_students_csv') }}">
+            <span aria-hidden="true">↓</span>
+            Download CSV
+        </a>
+
+        <a class="report-download-btn pdf-download"
+           href="{{ url_for('download_students_pdf') }}">
+            <span aria-hidden="true">↓</span>
+            Download PDF
+        </a>
+    </div>
+</section>
+
+<!-- SUMMARY CARDS -->
+<section class="summary">
+
+    <div class="metric">
+        <span>Total students analysed</span>
+        <strong>{{ count }}</strong>
+        <small>Student records processed</small>
+    </div>
+
+    <div class="metric high-metric">
+        <span>High-risk indicators</span>
+        <strong>{{ high_count }}</strong>
+        <small>Require supportive review</small>
+    </div>
+
+    <div class="metric medium-metric">
+        <span>Medium-risk indicators</span>
+        <strong>{{ medium_count }}</strong>
+        <small>May benefit from monitoring</small>
+    </div>
+
+    <div class="metric low-metric">
+        <span>Low-risk indicators</span>
+        <strong>{{ low_count }}</strong>
+        <small>Continue regular monitoring</small>
+    </div>
+
+</section>
+
+<!-- ANALYTICS -->
+<section class="analytics-grid">
+
+    <article class="panel">
+        <div class="panel-heading">
+            <div>
+                <p class="eyebrow">CLASS DISTRIBUTION</p>
+                <h3>Risk category overview</h3>
+            </div>
+        </div>
+
+        <div class="donut-layout">
+            <div class="donut"
+                 style="background: conic-gradient(
+                    #e35f66 0% {{ high_pct }}%,
+                    #e9ad48 {{ high_pct }}% {{ high_pct + medium_pct }}%,
+                    #32aa7b {{ high_pct + medium_pct }}% 100%
+                 );">
+
+                <div class="donut-center">
+                    <strong>{{ count }}</strong>
+                    <span>Students</span>
+                </div>
+            </div>
+
+            <div class="legend">
+
+                <div class="legend-item">
+                    <span class="legend-dot high-dot"></span>
+                    <div>
+                        <b>High</b>
+                        <small>{{ high_count }} students · {{ "%.1f"|format(high_pct) }}%</small>
+                    </div>
+                </div>
+
+                <div class="legend-item">
+                    <span class="legend-dot medium-dot"></span>
+                    <div>
+                        <b>Medium</b>
+                        <small>{{ medium_count }} students · {{ "%.1f"|format(medium_pct) }}%</small>
+                    </div>
+                </div>
+
+                <div class="legend-item">
+                    <span class="legend-dot low-dot"></span>
+                    <div>
+                        <b>Low</b>
+                        <small>{{ low_count }} students · {{ "%.1f"|format(low_pct) }}%</small>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-heading">
+            <div>
+                <p class="eyebrow">CLASS PERFORMANCE</p>
+                <h3>Average student indicators</h3>
+            </div>
+        </div>
+
+        <div class="performance-list">
+
+            <div class="performance-item">
+                <div class="performance-label">
+                    <span>Attendance</span>
+                    <b>{{ "%.1f"|format(avg_attendance) }}%</b>
+                </div>
+                <div class="performance-track">
+                    <div class="performance-fill attendance-fill"
+                         style="width:{{ avg_attendance }}%"></div>
+                </div>
+            </div>
+
+            <div class="performance-item">
+                <div class="performance-label">
+                    <span>Internal marks</span>
+                    <b>{{ "%.1f"|format(avg_marks) }}/30</b>
+                </div>
+                <div class="performance-track">
+                    <div class="performance-fill marks-fill"
+                         style="width:{{ (avg_marks / 30 * 100) if avg_marks else 0 }}%"></div>
+                </div>
+            </div>
+
+            <div class="performance-item">
+                <div class="performance-label">
+                    <span>Assignment completion</span>
+                    <b>{{ "%.1f"|format(avg_assignments) }}%</b>
+                </div>
+                <div class="performance-track">
+                    <div class="performance-fill assignment-fill"
+                         style="width:{{ avg_assignments }}%"></div>
+                </div>
+            </div>
+
+            <div class="performance-item">
+                <div class="performance-label">
+                    <span>Previous result</span>
+                    <b>{{ "%.1f"|format(avg_previous) }}%</b>
+                </div>
+                <div class="performance-track">
+                    <div class="performance-fill previous-fill"
+                         style="width:{{ avg_previous }}%"></div>
+                </div>
+            </div>
+
+        </div>
+    </article>
+
+</section>
+
+<!-- STUDENT SCREENING -->
+<div class="section-heading student-heading">
+    <div>
+        <p class="eyebrow">FACULTY VIEW</p>
+        <h2>Student screening review</h2>
+        <p class="muted-text">
+            Review individual student indicators and suggested support plans.
+        </p>
+    </div>
+</div>
+
+<div class="search-container">
+    <input
+        type="search"
+        id="student-search"
+        placeholder="Search by student name or ID..."
+        autocomplete="off"
+    >
+</div>
+
+<section class="students" id="student-list">
+
+    {% for s in results %}
+
+    <article class="student-card"
+             data-search="{{ (s.name ~ ' ' ~ s.student_id)|lower }}">
+
+        <div class="student-top">
+            <div>
+                <span class="student-id">{{ s.student_id }}</span>
+                <h3>{{ s.name }}</h3>
+            </div>
+
+            <span class="risk {{ s.level|lower }}">
+                {{ s.level }} indicator
+            </span>
+        </div>
+
+        <div class="score-line">
+            <strong>{{ s.score }}/100</strong>
+            <span>Experimental screening score</span>
+        </div>
+
+        <div class="bar">
+            <i class="{{ s.level|lower }}"
+               style="width:{{ s.score }}%"></i>
+        </div>
+
+        <div class="model-breakdown">
+            <span>
+                Random Forest:
+                <b>{{ s.model_scores['Random Forest'] }}%</b>
+            </span>
+
+            <span>
+                Gradient Boosting:
+                <b>{{ s.model_scores['Gradient Boosting'] }}%</b>
+            </span>
+
+            <span>
+                Pattern group:
+                <b>{{ s.segment }}</b>
+            </span>
+
+            <span>
+                Unusual pattern:
+                <b>{{ 'Review' if s.anomaly else 'Not flagged' }}</b>
+            </span>
+        </div>
+
+        <div class="student-indicators">
+            <div>
+                <span>Attendance</span>
+                <b>{{ s.attendance }}%</b>
+            </div>
+
+            <div>
+                <span>Internal marks</span>
+                <b>{{ s.internal_marks }}/30</b>
+            </div>
+
+            <div>
+                <span>Assignments</span>
+                <b>{{ s.assignment_completion }}%</b>
+            </div>
+
+            <div>
+                <span>Previous result</span>
+                <b>{{ s.previous_result }}%</b>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div>
+                <h4>Observed factors</h4>
+                <ul>
+                    {% for reason in s.reasons %}
+                        <li>{{ reason }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div>
+                <h4>Suggested support plan</h4>
+                <ol>
+                    {% for task in s.plan %}
+                        <li>{{ task }}</li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+
+        <p class="approval">
+            ◷ Suggested support only — faculty review required
+        </p>
+
+    </article>
+
+    {% endfor %}
+
+    <div id="no-students" class="empty-search" hidden>
+        No matching students found.
+    </div>
+
+</section>
+
+<!-- AI ASSISTANT -->
+<section class="chat-panel">
+
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">COORDINATOR + LOCAL LLM</p>
+            <h2>Ask CampusPulse AI</h2>
+            <p class="sub">
+                Ask questions about student performance and support plans.
+            </p>
+        </div>
+    </div>
+
+    <div class="quick-questions">
+        <button type="button" class="quick-btn"
+                data-question="Summarize the class performance.">
+            Class summary
+        </button>
+
+        <button type="button" class="quick-btn"
+                data-question="Which students have high risk?">
+            High-risk students
+        </button>
+
+        <button type="button" class="quick-btn"
+                data-question="Compare the low-risk and high-risk students.">
+            Compare categories
+        </button>
+
+        <button type="button" class="quick-btn"
+                data-question="Suggest support plans for high-risk students.">
+            Support suggestions
+        </button>
+    </div>
+
+    <div id="chat-log" class="chat-log">
+        <div class="bubble assistant">
+            Hello! I can summarise the analysed class or explain a student's screening indicators and suggested support plan. What would you like to know?
+        </div>
+    </div>
+
+    <form id="chat-form" class="chat-form">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <input
+            id="chat-input"
+            placeholder="e.g. Explain why Aditya Bose is at risk"
+            autocomplete="off"
+            required
+        >
+        <button type="submit" id="chat-submit">Ask AI</button>
+    </form>
+
+    <p id="chat-state" class="chat-state">
+        The assistant uses dataset tools first, then an available LLM.
+    </p>
+
+</section>
+
+<!-- AGENT ACTIVITY -->
+<section class="trace">
+    <p class="eyebrow">AGENT ACTIVITY</p>
+    <h2>Analysis workflow</h2>
+
+    <ol>
+        {% for item in trace %}
+            <li>{{ item }}</li>
+        {% endfor %}
+    </ol>
+</section>
+
+<p class="disclaimer">
+    Important: the included models are trained on synthetic demonstration data,
+    not validated institutional data. Scores and clusters are experimental
+    indicators, not diagnoses or decisions. Do not use them for disciplinary
+    action, admissions, grading or automated interventions. Faculty must
+    verify context and approve any support action.
+</p>
+
+</main>
+
+<script>
+
+// STUDENT SEARCH
+
+const searchInput = document.getElementById('student-search');
+const studentCards = document.querySelectorAll('.student-card');
+const noStudents = document.getElementById('no-students');
+
+searchInput.addEventListener('input', function () {
+    const query = this.value.toLowerCase().trim();
+    let visibleCount = 0;
+
+    studentCards.forEach(card => {
+        const text = card.dataset.search || '';
+        const matches = text.includes(query);
+
+        card.style.display = matches ? '' : 'none';
+
+        if (matches) {
+            visibleCount++;
+        }
+    });
+
+    noStudents.hidden = visibleCount !== 0;
+});
+
+
+// CHAT ASSISTANT
+
+const form = document.getElementById('chat-form');
+const input = document.getElementById('chat-input');
+const log = document.getElementById('chat-log');
+const state = document.getElementById('chat-state');
+const submitButton = document.getElementById('chat-submit');
+
+function addBubble(text, who) {
+    const el = document.createElement('div');
+
+    el.className = 'bubble ' + who;
+    el.textContent = text;
+
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+}
+
+
+// QUICK QUESTION BUTTONS
+
+document.querySelectorAll('.quick-btn').forEach(button => {
+    button.addEventListener('click', function () {
+        input.value = this.dataset.question;
+        form.requestSubmit();
+    });
+});
+
+
+// SEND MESSAGE
+
+form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const message = input.value.trim();
+
+    if (!message) return;
+
+    addBubble(message, 'user');
+    input.value = '';
+
+    state.textContent =
+        'CampusPulse AI is analysing your question...';
+
+    submitButton.disabled = true;
+    submitButton.textContent = 'Thinking...';
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('input[name="_csrf_token"]').value
+            },
+            body: JSON.stringify({
+                message: message
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Request failed');
+        }
+
+        addBubble(
+            data.answer + '  [Source: ' + data.provider + ']',
+            'assistant'
+        );
+
+        state.textContent = (data.trace || []).join(' · ');
+
+    } catch (err) {
+        state.textContent = err.message;
+
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Ask AI';
+    }
+});
+
+</script>
+
+</body>
+</html>

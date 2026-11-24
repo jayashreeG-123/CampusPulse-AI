@@ -1,0 +1,7 @@
+student_id,name,attendance,internal_marks,assignment_completion,previous_result
+STU101,Aarav,45,10,40,48
+STU102,Diya,90,12,85,62
+STU103,Kiran,95,27,100,88
+STU104,Meera,68,16,55,45
+STU105,Rohan,82,21,75,72
+STU106,Ananya,58,24,90,70

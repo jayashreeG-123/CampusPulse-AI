@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Progress | CampusPulse AI</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+.page{max-width:1180px;margin:35px auto;padding:0 20px}.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
+.panel{background:#fff;border:1px solid #e5eaf0;border-radius:14px;padding:18px;margin:16px 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:760px}th,td{text-align:left;padding:12px;border-bottom:1px solid #edf0f4}th{background:#f6f8fb}
+.up{color:#16834a}.down{color:#b54747}.muted{color:#64748b}
+</style></head><body><main class="page">
+<div class="top"><div><h1>Student Progress Tracking</h1><p class="muted">Compare the latest saved student snapshot with the previous upload.</p></div>
+<nav><a href="{{ url_for('portal') }}">Portal</a> · <a href="{{ url_for('index') }}">Dashboard</a> · <a href="{{ url_for('interventions') }}">Interventions</a></nav></div>
+<div class="panel"><p class="muted">Progress appears after you upload and analyse the same student ID in at least two separate datasets. Changes are descriptive comparisons, not proof that an intervention caused an outcome.</p>
+{% if comparisons %}<table><thead><tr><th>Student</th><th>Uploads tracked</th><th>Attendance</th><th>Internal marks</th><th>Assignments</th><th>Latest indicator</th></tr></thead><tbody>
+{% for item in comparisons %}<tr><td><b>{{ item.name }}</b><br><small>{{ item.student_id }}</small></td><td>{{ item.history_count }}</td>
+<td>{% if item.attendance_change is not none %}<span class="{{ 'up' if item.attendance_change >= 0 else 'down' }}">{{ '%+g'|format(item.attendance_change) }} pts</span>{% else %}First snapshot{% endif %}<br><small>Now {{ item.latest.attendance }}%</small></td>
+<td>{% if item.marks_change is not none %}<span class="{{ 'up' if item.marks_change >= 0 else 'down' }}">{{ '%+g'|format(item.marks_change) }}</span>{% else %}First snapshot{% endif %}<br><small>Now {{ item.latest.internal_marks }}/30</small></td>
+<td>{% if item.assignment_change is not none %}<span class="{{ 'up' if item.assignment_change >= 0 else 'down' }}">{{ '%+g'|format(item.assignment_change) }} pts</span>{% else %}First snapshot{% endif %}<br><small>Now {{ item.latest.assignment_completion }}%</small></td>
+<td>{{ item.latest.risk_level }} · {{ item.latest.screening_score }}/100</td></tr>{% endfor %}
+</tbody></table>{% else %}<p>No saved student snapshots yet. Upload a CSV from the dashboard to begin tracking.</p>{% endif %}</div>
+<div class="panel"><h2>Completed intervention comparisons</h2>
+<p class="muted">Baseline values are captured when an intervention is created. Outcome values are captured from the currently loaded dataset when it is marked Completed. A change does not prove causation.</p>
+{% if intervention_comparisons %}<table><thead><tr><th>Student / support</th><th>Attendance</th><th>Internal marks</th><th>Assignments</th><th>Screening score</th><th>Outcome date</th></tr></thead><tbody>
+{% for item in intervention_comparisons %}<tr><td><b>{{ item.student_name }}</b><br><small>{{ item.student_id }} · {{ item.support_type }}</small></td>
+<td>{{ item.baseline_attendance }}% → {{ item.outcome_attendance }}%</td>
+<td>{{ item.baseline_internal_marks }} → {{ item.outcome_internal_marks }}</td>
+<td>{{ item.baseline_assignment_completion }}% → {{ item.outcome_assignment_completion }}%</td>
+<td>{{ item.baseline_screening_score }} → {{ item.outcome_screening_score }}</td>
+<td>{{ item.outcome_captured_at }}</td></tr>{% endfor %}
+</tbody></table>{% else %}<p>No completed interventions with captured outcome data yet.</p>{% endif %}</div>
+</main></body></html>

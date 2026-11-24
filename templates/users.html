@@ -1,0 +1,126 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusPulse AI | User Management</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 30px;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+        .container {
+            max-width: 950px;
+            margin: auto;
+        }
+        .panel {
+            background: white;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px #0001;
+        }
+        input, select {
+            width: 100%;
+            padding: 11px;
+            margin: 8px 0 15px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 7px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 13px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        th { background: #eff6ff; }
+        a { color: #2563eb; text-decoration: none; }
+        .message { color: #dc2626; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <h1>User Management</h1>
+    <p>Create and manage CampusPulse AI accounts.</p>
+
+    <p>
+        <a href="{{ url_for('portal') }}">Portal</a>
+        |
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <p class="message">{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="panel">
+        <h2>Create New User</h2>
+
+        <form method="POST" action="{{ url_for('users') }}">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <label>Username</label>
+            <input type="text" name="username" minlength="3" required>
+
+            <label>Password</label>
+            <input type="password" name="password" minlength="8" required>
+
+            <label>Role</label>
+            <select name="role" required>
+                <option value="teacher">Teacher</option>
+                <option value="admin">Admin</option>
+            </select>
+
+            <button type="submit">Create Account</button>
+        </form>
+    </div>
+
+    <div class="panel">
+        <h2>Existing Users</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.role }}</td>
+                    <td>{{ user.created_at }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">No users found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+</body>
+</html>

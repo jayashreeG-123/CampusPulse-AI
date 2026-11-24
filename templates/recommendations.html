@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Support Reviews | CampusPulse AI</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>.page{max-width:1100px;margin:35px auto;padding:0 20px}.panel{background:#fff;border:1px solid #e5eaf0;border-radius:14px;padding:18px;margin:15px 0}
+.item{padding:16px 0;border-bottom:1px solid #edf0f4}.item:last-child{border:0}.muted{color:#64748b}.actions{display:flex;gap:10px;margin-top:12px}
+button{border:0;border-radius:8px;padding:9px 14px;cursor:pointer}.approve{background:#e7f7ed;color:#176b3a}.reject{background:#fff0ef;color:#a52d25}
+</style></head><body><main class="page"><h1>AI Support Recommendations</h1><p class="muted">Suggestions are generated from student indicators. A teacher or administrator must review each suggestion; nothing is automatically assigned.</p>
+<p><a href="{{ url_for('portal') }}">Portal</a> · <a href="{{ url_for('index') }}">Dashboard</a> · <a href="{{ url_for('progress') }}">Student Progress</a></p>
+<div class="panel">{% for item in recommendations %}<section class="item"><h3>{{ item.student_name }} <small>({{ item.student_id }})</small></h3><p>{{ item.recommendation }}</p>
+<p class="muted">Status: <b>{{ item.status }}</b> · Created {{ item.created_at }}{% if item.reviewed_by %} · Reviewed by {{ item.reviewed_by }} on {{ item.reviewed_at }}{% endif %}</p>
+{% if item.status == 'Pending' %}<div class="actions"><form method="POST" action="{{ url_for('review_recommendation', recommendation_id=item.id) }}"><input type="hidden" name="_csrf_token" value="{{ csrf_token }}"><input type="hidden" name="decision" value="Approved"><button class="approve" type="submit">Approve</button></form>
+<form method="POST" action="{{ url_for('review_recommendation', recommendation_id=item.id) }}"><input type="hidden" name="_csrf_token" value="{{ csrf_token }}"><input type="hidden" name="decision" value="Rejected"><button class="reject" type="submit">Reject</button></form></div>{% endif %}
+</section>{% else %}<p>No recommendations yet. Analyse a student CSV to generate teacher-review suggestions.</p>{% endfor %}</div></main></body></html>

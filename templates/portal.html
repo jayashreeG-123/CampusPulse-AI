@@ -1,0 +1,233 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusPulse AI | Home</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        .account-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 14px 5%;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .account-bar a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .account-bar button {
+            padding: 9px 16px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+        }
+
+        .account-role {
+            padding: 5px 10px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        @media(max-width: 600px) {
+            .account-bar {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body class="portal-page">
+
+    <!-- USER ACCOUNT BAR -->
+    <div class="account-bar">
+
+        <span>
+            Welcome, <b>{{ session.get('username', 'User') }}</b>
+        </span>
+
+        <span class="account-role">
+            {{ session.get('role', '')|upper }}
+        </span>
+
+        {% if session.get('role') == 'admin' %}
+            <a href="{{ url_for('users') }}">
+                Manage Users
+            </a>
+        {% endif %}
+
+        <form method="POST"
+              action="{{ url_for('logout') }}"
+              style="margin:0;">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+            <button type="submit">Logout</button>
+
+        </form>
+
+    </div>
+
+
+    <header class="portal-header">
+
+        <div class="portal-brand">
+
+            <div class="portal-logo">CP</div>
+
+            <div>
+                <h2>CampusPulse AI</h2>
+                <p>Intelligent Student Support System</p>
+            </div>
+
+        </div>
+
+        <span class="portal-tag">
+            MULTI-MODEL • AGENTIC AI
+        </span>
+
+    </header>
+
+
+    <main class="portal-main">
+
+        <section class="portal-welcome">
+
+            <p class="eyebrow">WELCOME TO CAMPUSPULSE</p>
+
+            <h1>
+                One Platform.<br>
+                Two Powerful Workspaces.
+            </h1>
+
+            <p>
+                Monitor student performance, identify students who
+                need support and manage teacher interventions
+                through one integrated platform.
+            </p>
+
+        </section>
+
+
+        <section class="portal-options">
+
+            <!-- STUDENT DASHBOARD -->
+
+            <a href="{{ url_for('index') }}"
+               class="portal-card analytics-card">
+
+                <div class="portal-card-icon">📊</div>
+
+                <span class="portal-card-label">
+                    WORKSPACE 01
+                </span>
+
+                <h2>Student Analytics Dashboard</h2>
+
+                <p>
+                    Analyse student CSV datasets, monitor academic
+                    performance, identify risk categories and get
+                    AI-powered insights.
+                </p>
+
+                <ul>
+                    <li>Upload student CSV files</li>
+                    <li>High, Medium and Low risk analysis</li>
+                    <li>Student performance charts</li>
+                    <li>AI student support assistant</li>
+                </ul>
+
+                <div class="portal-card-action">
+                    Open Analytics Dashboard
+                    <span>→</span>
+                </div>
+
+            </a>
+
+
+            <!-- TEACHER INTERVENTION BOARD -->
+
+            <a href="{{ url_for('interventions') }}"
+               class="portal-card intervention-card">
+
+                <div class="portal-card-icon">🎓</div>
+
+                <span class="portal-card-label">
+                    WORKSPACE 02
+                </span>
+
+                <h2>Teacher Intervention Board</h2>
+
+                <p>
+                    Manage student support activities, assign
+                    interventions, record follow-ups and track
+                    progress.
+                </p>
+
+                <ul>
+                    <li>Assign student support activities</li>
+                    <li>Monitor pending interventions</li>
+                    <li>Update intervention status</li>
+                    <li>Maintain follow-up history</li>
+                </ul>
+
+                <div class="portal-card-action">
+                    Open Teacher Board
+                    <span>→</span>
+                </div>
+
+            </a>
+
+        </section>
+
+
+        <section class="portal-footer-info">
+
+            <div>
+                <span>01</span>
+                <p>Identify student needs</p>
+            </div>
+
+            <div>
+                <span>02</span>
+                <p>Plan supportive actions</p>
+            </div>
+
+            <div>
+                <span>03</span>
+                <p>Monitor student progress</p>
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <footer class="portal-footer">
+
+        <p>CampusPulse AI © 2026</p>
+
+        <p>
+            Early Warning • Explainable Indicators •
+            Human-Reviewed Support
+        </p>
+
+    </footer>
+
+<div class="container" style="padding:12px 5%;"><a href="{{ url_for('progress') }}">Student Progress</a> · <a href="{{ url_for('recommendations') }}">AI Support Reviews</a></div></body>
+</html>
